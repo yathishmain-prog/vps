@@ -24,45 +24,29 @@ jobs:
           systemctl restart ssh
           EOS
 
-      - name: Install Tailscale
-        run: |
-          curl -fsSL https://tailscale.com/install.sh | sh
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          ping: ${{ secrets.CLIENT_TAILNET_IP }}
 
-      - name: Join tailnet and capture IPv4
-        env:
-          TS_AUTHKEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+      - name: Capture IPv4 and print access
         run: |
-          sudo tailscale up \
-            --authkey="${TS_AUTHKEY}" \
-            --hostname="gh-ssh-${GITHUB_RUN_ID}" \
-            --accept-routes
-          IP=""
-          for i in $(seq 1 20); do
-            IP=$(tailscale ip -4 2>/dev/null | head -n1 || true)
-            [ -n "$IP" ] && break
-            sleep 3
-          done
-          [ -n "$IP" ] || { echo "no tailscale ipv4"; exit 1; }
+          IP=$(tailscale ip -4 | head -n1)
           echo "TAILSCALE_IP=$IP" >> "$GITHUB_ENV"
-
-      - name: Verify SSH listener
-        run: |
-          sudo ss -tlnp | grep ':22\b' || true
-          echo "Listening on all interfaces. Tailnet IPv4: $TAILSCALE_IP"
-
-      - name: Access info
-        run: |
           echo "=== SSH ACCESS ==="
-          echo "Host:     $TAILSCALE_IP"
+          echo "Host:     $IP"
           echo "Port:     22"
           echo "User:     root"
           echo "Password: 1213"
-          echo "Command:  ssh root@$TAILSCALE_IP"
+          echo "Command:  ssh root@$IP"
           echo "=================="
 
       - name: Keep alive
         run: |
           while true; do
-            echo "[$(date -u)] SSH up on $TAILSCALE_IP - cancel workflow to terminate"
+            echo "[$(date -u)] SSH up on $TAILSCALE_IP - cancel to terminate"
             sleep 300
           done
