@@ -27,10 +27,10 @@ jobs:
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
         with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          oauth-client-id: ${{ secrets.k7x8FHZntJ11CNTRL }}
+          oauth-secret: ${{ secrets.tskey-client-k7x8FHZntJ11CNTRL-Ct5DqxjYbjjp6jyQzDw6jjPptxCs96K5L }}
           tags: tag:ci
-          ping: ${{ secrets.CLIENT_TAILNET_IP }}
+          ping: ${{ secrets.100.83.174.29 }}
 
       - name: Capture IPv4 and print access
         run: |
