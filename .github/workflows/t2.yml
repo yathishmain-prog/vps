@@ -1,0 +1,52 @@
+name: Ubuntu-SSH
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ssh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3600
+
+    steps:
+      - name: Set root password and enable SSH root login
+        run: |
+          sudo -i bash <<'EOS'
+          set -euxo pipefail
+          echo "root:1213" | chpasswd
+          mkdir -p /etc/ssh/sshd_config.d
+          cat > /etc/ssh/sshd_config.d/99-vps.conf <<'EOF'
+          PermitRootLogin yes
+          PasswordAuthentication yes
+          KbdInteractiveAuthentication no
+          UsePAM yes
+          EOF
+          systemctl restart ssh
+          EOS
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          ping: ${{ secrets.CLIENT_TAILNET_IP }}
+
+      - name: Capture IPv4 and print access
+        run: |
+          IP=$(tailscale ip -4 | head -n1)
+          echo "TAILSCALE_IP=$IP" >> "$GITHUB_ENV"
+          echo "=== SSH ACCESS ==="
+          echo "Host:     $IP"
+          echo "Port:     22"
+          echo "User:     root"
+          echo "Password: 1213"
+          echo "Command:  ssh root@$IP"
+          echo "=================="
+
+      - name: Keep alive
+        run: |
+          while true; do
+            echo "[$(date -u)] SSH up on $TAILSCALE_IP - cancel to terminate"
+            sleep 300
+          done
